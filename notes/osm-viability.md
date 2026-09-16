@@ -4,10 +4,12 @@ Measured 2026-09-16 against live pulls of both sources, the City of Toronto addr
 points already in `ontario-address-changes/data/toronto/toronto.db` (snapshot 126), and a
 fresh Overpass extract of Toronto food and personal-service POIs.
 
-**Short answer: yes, and the address is worth more than the POI.** DineSafe is a better
-street-address-and-postcode source than the address dataset this project's siblings already
-import into OSM. As a POI source it is usable but needs work: two thirds of it is already
-mapped, the category was dropped upstream in 2023, and the names are shouted.
+**Short answer: yes, and the address is worth more than the POI.** For the ~19k premises it
+covers, DineSafe carries postcodes and unit designators that the address dataset this
+project's siblings already import into OSM does not model at all. As a POI source it is
+usable but needs work: a third is confidently already mapped, another third shares an
+address with an OSM POI under a *different* name, the category was dropped upstream in
+2023, and the names are shouted.
 
 Reproduce with `scripts/fetch.py` then `scripts/match.py`.
 
@@ -99,35 +101,56 @@ DineSafe, confirmed-POI types only (10,420 establishments) against 13,920 OSM fo
 
 | | count | share |
 |---|---|---|
-| matched by address key | 5,295 | 50.8% |
-| matched by name within 150 m | 1,551 | 14.9% |
-| **already in OSM** | **6,846** | **65.7%** |
+| address key **and** name agree | 1,909 | 18.3% |
+| name agrees within 150 m, no address on the OSM side | 1,551 | 14.9% |
+| **confidently the same business** | **3,460** | **33.2%** |
+| address key matches but the name is someone else | 3,354 | 32.2% |
+| address matched an unnamed OSM feature | 32 | 0.3% |
 | no OSM counterpart found | 3,574 | 34.3% |
 
+**The address key alone is not a match, and this is the central finding.** 5,295
+establishments share an address key with an OSM food POI, but on **63.3% of those the names
+disagree**. Read the raw address-match rate as 50.8% and you would build a conflation that
+confidently attaches the wrong inspection history to the wrong node half the time.
+
+Some of that 32.2% is the mall problem below. Some of it is OSM lagging a turnover — which
+is precisely the thing this project would detect, so the disagreement is a product, not
+only an error bar.
+
 BodySafe against 2,831 OSM personal-service POIs: 897 by address (23.9%), 367 by name
-(9.8%), **33.6% already in OSM**, 2,496 with no counterpart.
+(9.8%), 33.6% matched at all, 2,496 with no counterpart. The same name-agreement caveat
+applies and has not been measured separately for BodySafe.
 
 ### The mall problem is real and is the main conflation risk
 
-Those 6,846 matches land on only **4,687 distinct OSM features**. 3,878 of them (82.7%) are
-claimed by exactly one establishment — trustworthy 1:1. But **2,968 establishments pile onto
-a shared feature**: 46 onto one `Manchu Wok`, 46 onto a `McDonald's`, 41 onto a
-`Chick-fil-A`. These are food courts where the address key is the mall and OSM models one
-node. 6 addresses host 50+ establishments each; 2,381 host 2–4.
+The matches land on only **4,687 distinct OSM features**. 3,878 of them are claimed by
+exactly one establishment — but "one claimant" is not the same as "right claimant," per the
+name disagreement above. **2,968 establishments pile onto a shared feature**: 46 onto one
+`Manchu Wok`, 46 onto a `McDonald's`, 41 onto a `Chick-fil-A`. These are food courts where
+the address key is the mall and OSM models one node. 6 addresses host 50+ establishments
+each; 2,381 host 2–4.
 
-Any conflation has to treat a multi-establishment address as a venue and fall back to
-name matching inside it, or it will confidently attach the wrong licence to the wrong node.
+Any conflation has to treat a multi-establishment address as a venue and match on name
+inside it, or it will attach the wrong licence to the wrong node.
 
 ### What could be added
 
 - **1,296 already-mapped food POIs carry no `addr:housenumber` and name-match a DineSafe
-  establishment** — 1,260 of those come with a postcode too. That is the import-grade
-  enrichment set, and postcode is a genuine gift since the city address points have none.
-- **318 personal-service POIs** likewise from BodySafe (no postcodes there).
-- **2,682 OSM food POIs sit at a confirmed Toronto address with no DineSafe counterpart** —
-  823 restaurants, 625 fast food, 401 cafés, 252 convenience. Either closed, mis-tagged, or
-  a licence this pull missed. A survey queue, not an import.
-- A further 5,614 unmatched OSM food POIs have no address tags at all, so they cannot be
+  establishment**, 1,260 with a postcode. They resolve to **1,196 distinct OSM features** —
+  100 of them are proposed by two nearby same-name establishments and need a tiebreak.
+  Of the 1,296, **159 sit within 50 m of a building that already carries that exact
+  address**; adding the tag to the node would manufacture the
+  address-node-inside-an-addressed-building pattern that `toronto-import-beholder` already
+  reports 95,639 times. So **~1,137 are genuinely new addresses**, and the remainder need
+  the containment check the beholder knows how to do. Candidates, not import-ready.
+- **318 personal-service POIs** likewise from BodySafe (no postcodes there), unchecked for
+  building containment.
+- **1,619 OSM food POIs sit at a confirmed Toronto address with no DineSafe counterpart** —
+  429 fast food, 392 restaurants, 225 cafés, 179 convenience. Either closed, mis-tagged, or
+  a licence this pull missed. A survey queue, not an import. (Counting only *typed* DineSafe
+  records inflates this to 2,682, because the 6,333 establishments whose category the
+  archive cannot recover are then not allowed to match anything.)
+- A further ~5,600 unmatched OSM food POIs have no address tags at all, so they cannot be
   placed either way without geometry work.
 
 ## Frictions to plan around
@@ -170,10 +193,17 @@ upload, not before building.
    Aesthetics/Micropigmentation → `shop=beauty`; only Injectable Personal Services, n=5, is
    ambiguous). 1,553 of 3,760 offer more than one service — the `beauty=*` multi-value case.
    Two thirds are not in OSM at all.
-3. **Address + postcode onto already-mapped food POIs.** 1,296 candidates, high confidence
-   because they name-match and the address resolves to a city point.
+3. **Address + postcode onto already-mapped food POIs.** ~1,137 candidates after removing
+   those whose building already carries the address. They name-match and resolve to a city
+   point, so confidence is good — but run the building-containment check properly before
+   calling any of it import-ready.
 4. **DineSafe as a new-POI source.** Workable but needs the venue rule, name case
    restoration, and the archive join for categories. Do it last.
+
+A fifth thing fell out of the measurement rather than being looked for: **3,354
+establishments sit at an address OSM also knows, under a name OSM does not have.** That is
+either a turnover OSM has not caught or a mall the address key cannot resolve. Separating
+those two is most of the work of a change feed, and it is the most OSM-useful output here.
 
 Nothing here argues against capture. Findings 3 (churn) and the id migration argue that
 capture should start before the design is finished.

@@ -53,6 +53,9 @@ Decisions deliberately not made yet. Decide them on purpose.
 
 ## Status
 
-Empty. Nothing built yet. This README is the whole repo.
+Nothing built yet, but no longer unmeasured. `notes/osm-viability.md` answers whether these
+two feeds can enrich OSM, from live pulls rather than from the leads below — including the
+licence question, which turns out not to be a blocker. Read it before deciding the open
+questions; several of them it answers outright.
 
 Next step when the project earns it: `/gh-init` from inside this folder for a GitHub remote.
