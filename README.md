@@ -7,10 +7,12 @@ Toronto open POI data. **Start with capturing and accumulating DineSafe and Body
 not the scope. The project is Toronto's open data as a POI corpus; these two are where
 the capture-and-accumulate machinery gets built and proven.
 
-**Capturing and accumulating** is the verb pair that matters. The city publishes a current
-view and overwrites it. Nobody keeps the history. This project pulls on a schedule and keeps
-every dated pull forever, so that later you can ask when a place opened, when it closed, and
-what it was called at the time — questions the live file cannot answer.
+**Capturing and accumulating** is the verb pair that matters. Read here as — and this is a
+reading, not something checked: the city publishes a current view and overwrites it, nobody
+keeps the history, so this project pulls on a schedule and keeps every dated pull forever.
+Then you can later ask when a place opened, when it closed and what it was called at the
+time. Whether the portal already retains history is listed below as unconfirmed; if it does,
+open question 1 gets a different answer.
 
 ## Open questions
 
