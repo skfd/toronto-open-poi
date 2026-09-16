@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toronto Open POI &mdash; candidate explorer</title>
+<link rel="stylesheet" href="explorer.css">
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script defer src="explorer.js"></script>
+</head>
+<body class="app">
+
+<header class="bar">
+  <div class="bar-head">
+    <h1>Toronto Open POI &mdash; what DineSafe and BodySafe would add to OSM</h1>
+    <span class="built">built {{BUILD_DATE}}</span>
+  </div>
+  <div class="counts">
+    <div class="count new"><strong id="n-new">{{NEW}}</strong><span>would create</span></div>
+    <div class="count enrich"><strong id="n-enrich">{{ENRICH}}</strong><span>would address</span></div>
+    <div class="count conflict"><strong id="n-conflict">{{CONFLICT}}</strong><span>name conflict</span></div>
+    <div class="count matched"><strong id="n-matched">{{MATCHED}}</strong><span>already in OSM</span></div>
+    <div class="count orphan"><strong id="n-orphan">{{ORPHAN}}</strong><span>OSM, unlicensed</span></div>
+    <div class="count notpoi"><strong id="n-not-poi">{{NOTPOI}}</strong><span>not a POI</span></div>
+    <div class="count meta-count">
+      Counts follow the filters. Of all {{NEW}} unmatched premises, <strong>{{CREATABLE}}</strong>
+      are the defensible ones: category known, and not one of several premises sharing a mall
+      or stadium address. The filters start on that view.
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <div id="map" data-geojson="candidates.geojson"></div>
+
+  <aside class="panel">
+    <div class="panel-head">
+      <div class="controls">
+        <label><span class="swatch new"></span>
+          <input type="checkbox" id="show-new" checked> Would create</label>
+        <label><span class="swatch enrich"></span>
+          <input type="checkbox" id="show-enrich" checked> Would address</label>
+        <label><span class="swatch conflict"></span>
+          <input type="checkbox" id="show-conflict" checked> Name conflict</label>
+        <label><span class="swatch matched"></span>
+          <input type="checkbox" id="show-matched"> Already in OSM</label>
+        <label><span class="swatch orphan"></span>
+          <input type="checkbox" id="show-orphan"> OSM, unlicensed</label>
+        <label><span class="swatch notpoi"></span>
+          <input type="checkbox" id="show-not-poi"> Not a POI</label>
+      </div>
+      <div class="controls controls-2">
+        <label><input type="checkbox" id="hide-venues" checked> Hide venue stalls (5+ per address)</label>
+        <label><input type="checkbox" id="show-unknown"> Include unknown category</label>
+        <label><input type="checkbox" id="only-food"> DineSafe only</label>
+        <label><input type="checkbox" id="only-body"> BodySafe only</label>
+        <input type="search" id="filter" placeholder="Filter by name, address or type...">
+      </div>
+      <p class="hint">
+        The table lists what is on screen. Click a row to centre it, then
+        <kbd>O</kbd> opens that spot on openstreetmap.org and <kbd>I</kbd> in the iD
+        editor &mdash; on the matched element where there is one, at the address
+        point where there is not. Hollow dots were not found in the City address
+        gazetteer, so their position is the health unit's own geocode and may be off
+        by tens of metres; small pale dots are premises whose category DineSafe
+        dropped in 2023 and the archive cannot recover. <strong>Nothing here is verified against the ground;
+        it is a survey queue, not an import.</strong>
+      </p>
+    </div>
+    <div class="table-scroll">
+      <table id="rows">
+        <thead>
+          <tr><th class="col-name">Name</th><th>Address</th>
+              <th>Would be</th><th>OSM &middot; iD</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="tally"></p>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

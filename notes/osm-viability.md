@@ -101,19 +101,24 @@ DineSafe, confirmed-POI types only (10,420 establishments) against 13,920 OSM fo
 
 | | count | share |
 |---|---|---|
-| address key **and** name agree | 1,909 | 18.3% |
+| address key **and** name agree | 2,270 | 21.8% |
 | name agrees within 150 m, no address on the OSM side | 1,551 | 14.9% |
-| **confidently the same business** | **3,460** | **33.2%** |
-| address key matches but the name is someone else | 3,354 | 32.2% |
-| address matched an unnamed OSM feature | 32 | 0.3% |
+| **confidently the same business** | **3,821** | **36.7%** |
+| address key matches but no POI there carries this name | 3,025 | 29.0% |
 | no OSM counterpart found | 3,574 | 34.3% |
 
 **The address key alone is not a match, and this is the central finding.** 5,295
-establishments share an address key with an OSM food POI, but on **63.3% of those the names
-disagree**. Read the raw address-match rate as 50.8% and you would build a conflation that
-confidently attaches the wrong inspection history to the wrong node half the time.
+establishments share an address key with an OSM food POI, but on **57.1% of those no POI at
+that address carries the name**. Read the raw address-match rate as 50.8% and you would
+build a conflation that attaches the wrong inspection history to the wrong node more often
+than not.
 
-Some of that 32.2% is the mall problem below. Some of it is OSM lagging a turnover — which
+The first cut of this measurement said 63.3%. It took the *first* OSM feature at the key
+instead of the one whose name agrees — at a shared address that picks a neighbour at
+random, and it mislabelled **361** genuine matches as conflicts. `src/classify.py` gathers
+every candidate at the key and prefers the name match; the figures above are its.
+
+Some of that 29.0% is the mall problem below. Some of it is OSM lagging a turnover — which
 is precisely the thing this project would detect, so the disagreement is a product, not
 only an error bar.
 
@@ -174,6 +179,16 @@ migration re-keyed some establishments' history and duplicated 3,269 rows. 2,196
 establishments have `oldEstId` literally `"None"`. This is happening now and only
 snapshots will record it.
 
+## One thing the explorer found that this survey did not
+
+Building `src/` on top of these numbers surfaced a duplication the survey missed: **884
+premises appear twice**, under the same name at the same address. 826 of those span the
+2025 CRM migration, which re-keyed part of DineSafe from a numeric id to a Salesforce one
+without retiring the old rows; the rest are re-licences at the same address. Counted as
+establishments they are two; mapped they are one shopfront. `src/reduce.py` collapses them,
+which takes the establishment count from 22,756 to 21,870 and scales every figure in the
+table above down by about 6%. The shares and the conclusions are unaffected.
+
 ## Licence: not a blocker
 
 CKAN reports `license_id: notspecified` for both packages — but it reports the same for
@@ -200,7 +215,7 @@ upload, not before building.
 4. **DineSafe as a new-POI source.** Workable but needs the venue rule, name case
    restoration, and the archive join for categories. Do it last.
 
-A fifth thing fell out of the measurement rather than being looked for: **3,354
+A fifth thing fell out of the measurement rather than being looked for: **3,025
 establishments sit at an address OSM also knows, under a name OSM does not have.** That is
 either a turnover OSM has not caught or a mall the address key cannot resolve. Separating
 those two is most of the work of a change feed, and it is the most OSM-useful output here.
