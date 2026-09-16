@@ -181,13 +181,19 @@ snapshots will record it.
 
 ## One thing the explorer found that this survey did not
 
-Building `src/` on top of these numbers surfaced a duplication the survey missed: **884
-premises appear twice**, under the same name at the same address. 826 of those span the
-2025 CRM migration, which re-keyed part of DineSafe from a numeric id to a Salesforce one
-without retiring the old rows; the rest are re-licences at the same address. Counted as
-establishments they are two; mapped they are one shopfront. `src/reduce.py` collapses them,
-which takes the establishment count from 22,756 to 21,870 and scales every figure in the
-table above down by about 6%. The shares and the conclusions are unaffected.
+Building `src/` on top of these numbers surfaced a duplication the survey missed: **839
+premises appear twice**, under the same name, unit and address. 804 of those span the 2025
+CRM migration, which re-keyed part of DineSafe from a numeric id to a Salesforce one
+without retiring the old rows; the rest are re-licences at one address. Counted as
+establishments they are two; mapped they are one shopfront. `src/reduce.py` collapses
+them, taking the establishment count from 22,756 to 21,917 and scaling every figure in
+the table above down by about 6%. The shares and the conclusions are unaffected.
+
+The dedup key is deliberately stricter than the one used to match OSM. Matching drops
+1-4 digit tokens, so "Tim Hortons #4021" finds "Tim Hortons"; deduplicating must not,
+because at the Rogers Centre those digits are the entire difference between "215 INFIELD
+CLASSICS" and "229 INFIELD CLASSICS". The looser key collapsed 45 groups of genuinely
+separate shopfronts before this was caught.
 
 ## Licence: not a blocker
 

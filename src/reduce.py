@@ -178,19 +178,32 @@ def name_key(name):
     return re.sub(r'\s+', ' ', STOPWORDS.sub('', s)).strip()
 
 
+def _twin_key(rec):
+    """Identity for deduplication -- deliberately stricter than ``name_key``.
+
+    ``name_key`` drops 1-4 digit tokens, which is right for matching OSM ("Tim
+    Hortons #4021" is "Tim Hortons") and wrong here: at the Rogers Centre the digits
+    are the whole distinction between "215 INFIELD CLASSICS" and "229 INFIELD
+    CLASSICS". Keep them, and keep the unit, so two shopfronts in one building stay
+    two. Case and punctuation still collapse, so "A&W" and "A & W" are one.
+    """
+    name = ' '.join(''.join(c if c.isalnum() else ' ' for c in rec['name'].lower()).split())
+    return rec['source'], rec['key'], rec['unit'] or '', name
+
+
 def _collapse_twins(recs):
-    """One premise per (address, name), not one per licence id.
+    """One premise per shopfront, not one per licence id.
 
     The 2025 CRM migration re-keyed part of DineSafe from a numeric id to a
-    Salesforce one without retiring the old rows, so ~830 premises appear twice
-    under the same name and address. A re-licence at the same address does the
+    Salesforce one without retiring the old rows, so ~800 premises appear twice
+    under the same name, unit and address. A re-licence at the same address does the
     same thing. Either way OSM would map one shopfront, so keep the newest.
     """
     groups = collections.defaultdict(list)
     loose = []
     for r in recs:
         if r['key']:
-            groups[(r['source'], r['key'], name_key(r['name']))].append(r)
+            groups[_twin_key(r)].append(r)
         else:
             loose.append(r)
     kept = []

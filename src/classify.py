@@ -115,10 +115,15 @@ def classify(records, gaz):
                 hit, how = agreeing[0], 'address+name'
             else:
                 named = [o for o in candidates if o['name']]
-                r.update(verdict='conflict', osm_id=named[0]['id'] if named else candidates[0]['id'],
-                         osm_name=named[0]['name'] if named else None, match_m=0,
+                other = named[0] if named else candidates[0]
+                r.update(verdict='conflict', osm_id=other['id'], osm_name=other['name'],
+                         match_m=round(metres(r['alon'], r['alat'],
+                                              other['lon'], other['lat']), 1),
                          reason='OSM has %d POI(s) at this address, none by this name'
                                 % len(candidates))
+                # Like the other matched verdicts, the dot goes on the element a
+                # mapper would open -- not on the address point behind it.
+                r['alat'], r['alon'] = other['lat'], other['lon']
                 claimed.update(o['id'] for o in candidates)
                 continue
 

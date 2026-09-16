@@ -75,9 +75,10 @@ acting on it would mean:
 | **OSM, unlicensed** | mapped at a confirmed Toronto address with no licence behind it — closed, mis-tagged, or missed |
 | **not a POI** | a kitchen inside a school, nursing home or processing plant |
 
-The filters open on the defensible subset: **4,982 premises** that are unmatched, whose
-category is known, and that do not share a mall or stadium address with four others. All
-9,423 unmatched are there behind the toggles, and the counts follow whatever you filter to.
+The filters open on the defensible subset: the **~5,000 premises** that are unmatched,
+whose category is known, and that do not share a mall or stadium address with four
+others. All ~9,400 unmatched are there behind the toggles, and the header counts follow
+whatever you filter to. `run.py build` prints the exact figures for the current pull.
 
 Click a row to centre it, then <kbd>O</kbd> opens that spot on openstreetmap.org and
 <kbd>I</kbd> in the iD editor — on the matched element where there is one, at the City
