@@ -59,9 +59,17 @@ python run.py build     # reduce, classify against OSM, render site/explorer/
 python run.py serve     # http://127.0.0.1:8777/explorer/
 ```
 
-![The explorer over downtown Toronto: red dots are premises with no OSM counterpart, teal
-are mapped POIs missing an address, orange are addresses where OSM knows a different
-name.](docs/explorer.png)
+![A candidate's popup: a tag-by-tag comparison of what OSM has against what the licence
+says, with the tags an edit would add picked out in green and the one disagreement in
+red.](docs/explorer.png)
+
+Click any dot and the popup puts **both sides in OSM tag shape, side by side** — what the
+element carries now against what the licence says it should. Green rows are tags an edit
+would add; red rows are the two disagreeing; `≈` marks values that differ only by
+abbreviation or case (`Oakwood Ave` against `Oakwood Avenue`). The table's `+n` / `≠n`
+pills are the same counts per row. Translating a licence into tags is a judgement call, so
+it lives in one place, `src/tags.py`, and the source spelling is always shown beside the
+guess.
 
 Every licensed premise gets one verdict against OpenStreetMap, and the map shows what
 acting on it would mean:

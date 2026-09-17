@@ -63,7 +63,13 @@ def split_key(street_address):
 
 
 def restore_case(name):
-    """A readable rendering of a SHOUTED name. A hint for a mapper, never a tag."""
+    """A readable rendering of a SHOUTED name.
+
+    This is a guess, and the explorer always shows the source spelling beside it so a
+    mapper can see what was guessed at. "Mc" is the one family worth special-casing --
+    it is common and always wrong otherwise. "Mac" is left alone, because "Machine"
+    and "Mackenzie" are the same three letters.
+    """
     if not name or name != name.upper():
         return name
     out = []
@@ -72,13 +78,15 @@ def restore_case(name):
             out.append(word)
             continue
         bare = word.strip('.,()&-')
-        if bare in _KEEP_UPPER or (len(bare) <= 3 and not bare.isalpha()):
+        # A lone letter is an initial ("L. A. Salon"), never the article "a".
+        if len(bare) == 1 or bare in _KEEP_UPPER or (len(bare) <= 3 and not bare.isalpha()):
             out.append(word)
         elif i and bare.lower() in _SMALL:
             out.append(word.lower())
         else:
-            out.append(re.sub(r"[A-Za-z][A-Za-z']*",
-                              lambda m: m.group(0)[0] + m.group(0)[1:].lower(), word.title()))
+            titled = re.sub(r"[A-Za-z][A-Za-z']*",
+                            lambda m: m.group(0)[0] + m.group(0)[1:].lower(), word.title())
+            out.append(re.sub(r'\bMc([a-z])', lambda m: 'Mc' + m.group(1).upper(), titled))
     return ''.join(out)
 
 
@@ -137,7 +145,7 @@ def dinesafe():
             name=r['estName'], addr=addr, unit=unit, postcode=pc, key=split_key(addr),
             lat=float(r['latitude']), lon=float(r['longitude']),
             type=types.get(r['oldEstId']), last_inspection=r['inspectionDate'],
-            status=r['inspectionStatus'],
+            status=r['inspectionStatus'], phone=r['phone'],
         ))
     return out
 
@@ -159,7 +167,7 @@ def bodysafe():
             name=r['estName'], addr=addr, unit=unit, postcode=pc, key=split_key(addr),
             lat=lat, lon=lon,
             type=' + '.join(sorted(by_est[est])), last_inspection=r['insDate'],
-            status=r['insStatus'],
+            status=r['insStatus'], phone=None,
         ))
     return out
 

@@ -76,7 +76,7 @@ def load_osm(path, want_kinds=True):
             housenumber=tags.get('addr:housenumber'), street=tags.get('addr:street'),
             postcode=tags.get('addr:postcode'),
             key=address_key(tags.get('addr:housenumber'), tags.get('addr:street')),
-            kind=kind if want_kinds else None, lat=lat, lon=lon,
+            kind=kind if want_kinds else None, lat=lat, lon=lon, tags=tags,
         ))
     return out
 
@@ -102,8 +102,8 @@ def classify(records, gaz):
         kinds = pools[r['source']]
         if r['type'] in config.TYPE_INSIDE or (
                 r['source'] == 'dinesafe' and r['type'] and r['type'] not in config.TYPE_POI):
-            r.update(verdict='not-poi', reason='licensed premise inside or behind another POI',
-                     osm_id=None, osm_name=None, match_m=None)
+            r.update(verdict='not-poi', reason='inside',
+                     osm_id=None, osm_name=None, match_m=None, osm_tags=None)
             continue
 
         mine = name_key(r['name'])
@@ -117,10 +117,10 @@ def classify(records, gaz):
                 named = [o for o in candidates if o['name']]
                 other = named[0] if named else candidates[0]
                 r.update(verdict='conflict', osm_id=other['id'], osm_name=other['name'],
+                         osm_tags=other['tags'],
                          match_m=round(metres(r['alon'], r['alat'],
                                               other['lon'], other['lat']), 1),
-                         reason='OSM has %d POI(s) at this address, none by this name'
-                                % len(candidates))
+                         reason='clash')
                 # Like the other matched verdicts, the dot goes on the element a
                 # mapper would open -- not on the address point behind it.
                 r['alat'], r['alon'] = other['lat'], other['lon']
@@ -135,22 +135,22 @@ def classify(records, gaz):
                 hit, how = nearby[0][0], 'name+proximity'
 
         if not hit:
-            r.update(verdict='new', reason='no OSM feature at this address or by this name',
-                     osm_id=None, osm_name=None, match_m=None)
+            r.update(verdict='new', reason='none',
+                     osm_id=None, osm_name=None, match_m=None, osm_tags=None)
             continue
 
         claimed.add(hit['id'])
         dist = round(metres(r['alon'], r['alat'], hit['lon'], hit['lat']), 1)
         if hit['housenumber']:
-            r.update(verdict='matched', reason='OSM has this business, addressed (%s)' % how,
-                     osm_id=hit['id'], osm_name=hit['name'], match_m=dist)
+            r.update(verdict='matched', reason='addressed',
+                     osm_id=hit['id'], osm_name=hit['name'], match_m=dist,
+                     osm_tags=hit['tags'])
         else:
             dup = any(metres(hit['lon'], hit['lat'], b['lon'], b['lat']) <= BUILDING_RADIUS_M
                       for b in bld_key.get(r['key'], ()))
             r.update(verdict='enrich', osm_id=hit['id'], osm_name=hit['name'], match_m=dist,
-                     enrich_dup=dup,
-                     reason=('the building here already carries this address'
-                             if dup else 'OSM has this business but no address on it'))
+                     enrich_dup=dup, osm_tags=hit['tags'],
+                     reason='dupaddr' if dup else 'noaddr')
         # An enrich/conflict/matched dot belongs on the element a mapper would edit.
         r['alat'], r['alon'] = hit['lat'], hit['lon']
 

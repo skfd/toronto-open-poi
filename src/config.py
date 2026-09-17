@@ -51,43 +51,56 @@ TYPE_INSIDE = frozenset([
     'Church Banquet Facility', 'Community Kitchen (Meal Program)', 'Serving Kitchen',
 ])
 
-# The OSM tag a DineSafe type would most likely become. Only a starting point for a
-# mapper -- the source says what is licensed, not what the shopfront says.
+# The OSM tags a DineSafe type would most likely become. Only a starting point for
+# a mapper -- the source says what is licensed, not what the shopfront says.
 TYPE_TO_OSM = {
-    'Restaurant': 'amenity=restaurant',
-    'Food Take Out': 'amenity=fast_food',
-    'Food Store (Convenience/Variety)': 'shop=convenience',
-    'Supermarket': 'shop=supermarket',
-    'Food Court Vendor': 'amenity=fast_food',
-    'Bakery': 'shop=bakery',
-    'Bake Shop': 'shop=bakery',
-    'Butcher Shop': 'shop=butcher',
-    'Cocktail Bar / Beverage Room': 'amenity=bar',
-    'Cafeteria - Public Access': 'amenity=cafeteria',
-    'Fish Shop': 'shop=seafood',
-    'Ice Cream / Yogurt Vendors': 'amenity=ice_cream',
-    'Refreshment Stand (Stationary)': 'amenity=fast_food',
-    'Banquet Facility': 'amenity=events_venue',
-    'Private Club': 'amenity=social_club',
-    'Bed & Breakfast': 'tourism=guest_house',
-    'Brew Your Own Beer / Wine': 'shop=brewing_supplies',
-    'Food Depot': 'social_facility=food_bank',
-    'Food Bank': 'social_facility=food_bank',
-    'Hot Dog Cart': 'amenity=fast_food',
-    'Food Cart': 'amenity=fast_food',
+    'Restaurant': {'amenity': 'restaurant'},
+    'Food Take Out': {'amenity': 'fast_food'},
+    'Food Store (Convenience/Variety)': {'shop': 'convenience'},
+    'Supermarket': {'shop': 'supermarket'},
+    'Food Court Vendor': {'amenity': 'fast_food'},
+    'Bakery': {'shop': 'bakery'},
+    'Bake Shop': {'shop': 'bakery'},
+    'Butcher Shop': {'shop': 'butcher'},
+    'Cocktail Bar / Beverage Room': {'amenity': 'bar'},
+    'Cafeteria - Public Access': {'amenity': 'cafeteria'},
+    'Fish Shop': {'shop': 'seafood'},
+    'Ice Cream / Yogurt Vendors': {'amenity': 'ice_cream'},
+    'Refreshment Stand (Stationary)': {'amenity': 'fast_food'},
+    'Banquet Facility': {'amenity': 'events_venue'},
+    'Private Club': {'amenity': 'social_club'},
+    'Bed & Breakfast': {'tourism': 'guest_house'},
+    'Brew Your Own Beer / Wine': {'shop': 'brewing_supplies'},
+    'Food Depot': {'social_facility': 'food_bank'},
+    'Food Bank': {'social_facility': 'food_bank'},
+    'Hot Dog Cart': {'amenity': 'fast_food'},
+    'Food Cart': {'amenity': 'fast_food'},
 }
 
 # BodySafe srvType -> OSM. Near 1:1; only the injectables case is genuinely unclear.
 SRV_TO_OSM = {
-    'Barbering & Hairdressing': 'shop=hairdresser',
-    'Tattooing': 'shop=tattoo',
-    'Body Piercing': 'shop=piercing',
-    'Ear Piercing': 'shop=piercing',
-    'Nails': 'shop=beauty + beauty=nails',
-    'Aesthetics': 'shop=beauty',
-    'Micropigmentation/Microblading': 'shop=beauty',
-    'Injectable Personal Services': 'amenity=clinic (uncertain)',
+    'Barbering & Hairdressing': {'shop': 'hairdresser'},
+    'Tattooing': {'shop': 'tattoo'},
+    'Body Piercing': {'shop': 'piercing'},
+    'Ear Piercing': {'shop': 'piercing'},
+    'Nails': {'shop': 'beauty', 'beauty': 'nails'},
+    'Aesthetics': {'shop': 'beauty'},
+    'Micropigmentation/Microblading': {'shop': 'beauty', 'beauty': 'tattoo'},
+    'Injectable Personal Services': {'amenity': 'clinic'},
 }
+
+# A premise licensed for several services gets one shop value; the most specific
+# trade wins, because that is what the shopfront says.
+SHOP_PRECEDENCE = ('tattoo', 'piercing', 'hairdresser', 'beauty')
+
+# Tags the explorer compares, in the order it shows them.
+COMPARE_TAGS = ('name', 'addr:housenumber', 'addr:street', 'addr:unit', 'addr:floor',
+                'addr:postcode', 'amenity', 'shop', 'beauty', 'tourism', 'social_facility',
+                'phone')
+
+# OSM tags worth carrying into the page so the comparison can show what is already
+# there. Anything else on the element is left alone and not shown.
+OSM_TAGS_KEPT = COMPARE_TAGS + ('addr:city', 'cuisine', 'website', 'opening_hours', 'brand')
 
 # A shared address hosting this many premises is a venue -- a mall or food court that
 # OSM models as one feature, not as N shopfronts.

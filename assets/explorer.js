@@ -17,11 +17,24 @@ const LABEL = {
   'orphan': 'in OSM with no licence',
   'not-poi': 'not a mappable POI',
 };
+/* Comparison states, one character each in the file. */
+const ADD = 'a', DIFF = 'd', CONV = 'c', SAME = 's', OSM_ONLY = 'o';
+const STATE_NOTE = {
+  [ADD]: 'only the licence has this — an edit would add it',
+  [DIFF]: 'both have a value and they disagree',
+  [CONV]: 'the same, once spelling conventions collapse',
+  [SAME]: 'identical',
+  [OSM_ONLY]: 'only OSM has this — nothing to contribute',
+};
+const STATE_CLASS = {
+  [ADD]: 'add', [DIFF]: 'diff', [CONV]: 'conv', [SAME]: 'same', [OSM_ONLY]: 'osm',
+};
 const ORDER = ['matched', 'not-poi', 'orphan', 'conflict', 'enrich', 'new'];
 const VENUE_MIN = 5;
 const MAX_ROWS = 400;
 
-let map, layers = {}, all = [], selected = null, selectedMarker = null;
+let map, layers = {}, all = [], selected = null;
+let tagLegend = [], reasons = {};
 
 function style(props) {
   const c = COLOURS[props.verdict] || '#000';
@@ -59,34 +72,71 @@ function idUrl(p, lat, lon) {
   return `https://www.openstreetmap.org/edit?editor=id#map=19/${lat}/${lon}`;
 }
 
-function popup(p, lat, lon) {
-  const line = [];
-  line.push(`<h3>${esc(p.readable || p.name || '(unnamed)')}</h3>`);
-  if (p.readable && p.name && p.readable !== p.name) {
-    line.push(`<p class="raw">source spelling: <code>${esc(p.name)}</code></p>`);
+/* The heart of the popup: both sides as OSM tags, with the differences marked. */
+function tagTable(p) {
+  const diff = p.diff || [];
+  if (!diff.length) return '';
+  const adds = diff.filter(r => r[3] === ADD).length;
+  const clashes = diff.filter(r => r[3] === DIFF).length;
+
+  const head = p.osm
+    ? '<tr><th class="k">tag</th><th>in OSM</th><th>from the licence</th></tr>'
+    : '<tr><th class="k">tag</th><th colspan="2">what this POI would be tagged</th></tr>';
+
+  const body = diff.map(([tagIdx, osmVal, srcVal, state]) => {
+    const tag = tagLegend[tagIdx] || '?';
+    const note = STATE_NOTE[state] || '';
+    const left = p.osm
+      ? `<td class="v ${osmVal ? '' : 'none'}">${osmVal ? esc(osmVal) : '—'}</td>`
+      : '';
+    const span = p.osm ? '' : ' colspan="2"';
+    return `<tr class="s-${STATE_CLASS[state] || state}" title="${esc(note)}">`
+      + `<td class="k">${esc(tag)}</td>`
+      + left
+      + `<td class="v ${srcVal ? '' : 'none'}"${span}>${srcVal ? esc(srcVal) : '—'}</td></tr>`;
+  }).join('');
+
+  let summary = '';
+  if (p.osm) {
+    const bits = [];
+    if (adds) bits.push(`<strong>${adds}</strong> tag${adds === 1 ? '' : 's'} to add`);
+    if (clashes) bits.push(`<strong>${clashes}</strong> disagree${clashes === 1 ? 's' : ''}`);
+    summary = bits.length ? `<p class="tagsum">${bits.join(' · ')}</p>` : '';
   }
-  const addr = [p.addr, p.unit, p.postcode].filter(Boolean).join(' · ');
-  if (addr) line.push(`<p class="addr">${esc(addr)}</p>`);
-  line.push(`<p class="verdict ${p.verdict}">Would be ${esc(LABEL[p.verdict])}</p>`);
-  line.push(`<p class="why">${esc(p.reason || '')}</p>`);
+  return `<table class="tagdiff">${head}${body}</table>${summary}`;
+}
+
+function facts(p) {
   const rows = [];
   if (p.type) rows.push(['Licensed as', p.type]);
-  if (p.tag) rows.push(['Likely OSM tag', p.tag]);
   if (p.inspected) rows.push(['Last inspected', `${p.inspected} — ${p.status || ''}`]);
   if (p.venue > 1) rows.push(['Premises at this address', String(p.venue)]);
   if (p.unknown) rows.push(['Category', 'not recoverable — licensed after the 2023 archive']);
   if (p.twins) rows.push(['Also licensed as', `${p.twins} superseded id(s), collapsed`]);
-  if (p.osm_name) rows.push(['OSM name here', p.osm_name]);
-  if (p.m !== undefined && p.m !== null) rows.push(['Distance to OSM feature', `${p.m} m`]);
+  if (p.m !== undefined && p.m !== null && p.osm) rows.push(['Distance to that element', `${p.m} m`]);
   if (p.dup) rows.push(['Caution', 'the building here already carries this address']);
   if (p.snapped === false) rows.push(['Position', 'health-unit geocode, not a City address point']);
-  if (rows.length) {
-    line.push('<table>' + rows.map(
-      ([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('') + '</table>');
+  if (!rows.length) return '';
+  return '<table class="facts">' + rows.map(
+    ([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('') + '</table>';
+}
+
+function popup(p, lat, lon) {
+  const out = [];
+  out.push(`<h3>${esc(p.readable || p.name || '(unnamed)')}</h3>`);
+  if (p.readable && p.name && p.readable !== p.name) {
+    out.push(`<p class="raw">source spelling: <code>${esc(p.name)}</code></p>`);
   }
-  line.push(`<p class="links"><a href="${osmUrl(p, lat, lon)}" target="_blank" rel="noopener">OSM</a>`
-    + ` · <a href="${idUrl(p, lat, lon)}" target="_blank" rel="noopener">iD</a></p>`);
-  return line.join('');
+  const addr = [p.addr, p.unit, p.postcode].filter(Boolean).join(' · ');
+  if (addr) out.push(`<p class="addr">${esc(addr)}</p>`);
+  out.push(`<p class="verdict ${p.verdict}">Would be ${esc(LABEL[p.verdict])}</p>`);
+  out.push(`<p class="why">${esc(reasons[p.reason] || p.reason || '')}</p>`);
+  out.push(tagTable(p));
+  out.push(facts(p));
+  out.push(`<p class="links"><a href="${osmUrl(p, lat, lon)}" target="_blank" rel="noopener">OSM</a>`
+    + ` · <a href="${idUrl(p, lat, lon)}" target="_blank" rel="noopener">iD</a>`
+    + (p.osm ? ` <span class="elid">${esc(p.osm)}</span>` : '') + '</p>');
+  return out.join('');
 }
 
 function passesFilters(f) {
@@ -100,7 +150,7 @@ function passesFilters(f) {
   if (body && p.src !== 'bodysafe') return false;
   const q = document.getElementById('filter').value.trim().toLowerCase();
   if (q) {
-    const hay = [p.name, p.readable, p.addr, p.type, p.postcode, p.osm_name]
+    const hay = [p.name, p.readable, p.addr, p.type, p.postcode, p.osm]
       .filter(Boolean).join(' ').toLowerCase();
     if (!hay.includes(q)) return false;
   }
@@ -108,16 +158,13 @@ function passesFilters(f) {
 }
 
 function redraw() {
-  ORDER.forEach(v => {
-    const group = layers[v];
-    group.clearLayers();
-  });
+  ORDER.forEach(v => layers[v].clearLayers());
   all.forEach(f => {
     if (!passesFilters(f)) return;
     const [lon, lat] = f.geometry.coordinates;
     const m = L.circleMarker([lat, lon], style(f.properties));
     m.feature = f;
-    m.bindPopup(() => popup(f.properties, lat, lon), { maxWidth: 340 });
+    m.bindPopup(() => popup(f.properties, lat, lon), { maxWidth: 420, minWidth: 300 });
     layers[f.properties.verdict].addLayer(m);
   });
   updateCounts();
@@ -146,12 +193,15 @@ function fillTable() {
   visible.slice(0, MAX_ROWS).forEach(m => {
     const p = m.feature.properties;
     const [lon, lat] = m.feature.geometry.coordinates;
+    const adds = (p.diff || []).filter(r => r[3] === ADD).length;
+    const clashes = (p.diff || []).filter(r => r[3] === DIFF).length;
     const tr = document.createElement('tr');
     tr.className = p.verdict;
     tr.innerHTML = `<td class="col-name"><span class="swatch ${p.verdict}"></span>`
       + `${esc(p.readable || p.name || '(unnamed)')}</td>`
       + `<td>${esc(p.addr || '')}</td>`
-      + `<td>${esc(LABEL[p.verdict])}</td>`
+      + `<td class="tags">${adds ? `<span class="pill add">+${adds}</span>` : ''}`
+      + `${clashes ? `<span class="pill diff">≠${clashes}</span>` : ''}</td>`
       + `<td class="links"><a href="${osmUrl(p, lat, lon)}" target="_blank" rel="noopener">OSM</a>`
       + ` · <a href="${idUrl(p, lat, lon)}" target="_blank" rel="noopener">iD</a></td>`;
     tr.addEventListener('click', ev => {
@@ -170,7 +220,6 @@ function select(marker, tr) {
   document.querySelectorAll('#rows tr.sel').forEach(el => el.classList.remove('sel'));
   if (tr) tr.classList.add('sel');
   selected = marker.feature;
-  selectedMarker = marker;
   map.panTo(marker.getLatLng());
   marker.openPopup();
 }
@@ -198,6 +247,8 @@ function init() {
   fetch(el.dataset.geojson)
     .then(r => r.json())
     .then(data => {
+      tagLegend = data.tagLegend || [];
+      reasons = data.reasons || {};
       all = data.features;
       redraw();
     })

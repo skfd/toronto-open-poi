@@ -63,7 +63,9 @@
         <input type="search" id="filter" placeholder="Filter by name, address or type...">
       </div>
       <p class="hint">
-        The table lists what is on screen. Click a row to centre it, then
+        The table lists what is on screen; <span class="pill add">+n</span> is tags the
+        licence would add, <span class="pill diff">&ne;n</span> tags the two disagree on.
+        Click a row to centre it and open the full tag comparison, then
         <kbd>O</kbd> opens that spot on openstreetmap.org and <kbd>I</kbd> in the iD
         editor &mdash; on the matched element where there is one, at the address
         point where there is not. Hollow dots were not found in the City address
@@ -77,7 +79,7 @@
       <table id="rows">
         <thead>
           <tr><th class="col-name">Name</th><th>Address</th>
-              <th>Would be</th><th>OSM &middot; iD</th></tr>
+              <th>Tags</th><th>OSM &middot; iD</th></tr>
         </thead>
         <tbody></tbody>
       </table>

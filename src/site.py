@@ -5,21 +5,36 @@ import os
 import shutil
 from datetime import date
 
-from src import config
+from src import config, tags
 from src.reduce import restore_case
 
 EXPLORER_DIR = os.path.join(config.SITE_DIR, 'explorer')
 
+# Why a premise landed where it did. The page holds the prose; shipping a code
+# per feature instead of the sentence saves about a megabyte.
+REASONS = {
+    'inside': 'licensed premise inside or behind another POI',
+    'none': 'no OSM feature at this address or by this name',
+    'addressed': 'OSM already has this business, with an address',
+    'noaddr': 'OSM has this business but no address on it',
+    'dupaddr': 'the building here already carries this address',
+    'clash': 'OSM has a POI at this address, none by this name',
+    'orphan': 'mapped in OSM at a Toronto address, but no licence matches it',
+}
 
-def _feature(rec):
+
+def _feature(rec, tag_index):
+    """One candidate, with its tag comparison encoded against the shared legend."""
+    diff = [[tag_index(tag), osm, src, state]
+            for tag, osm, src, state in tags.compare(rec, rec.get('osm_tags'))]
     props = dict(
         src=rec['source'], id=rec['est_id'], verdict=rec['verdict'],
         name=rec['name'], readable=rec['name_readable'],
         addr=restore_case(rec['addr']), unit=rec['unit'], postcode=rec['postcode'],
-        type=rec['type'], tag=_osm_tag(rec),
+        type=rec['type'], diff=diff,
         inspected=rec['last_inspection'], status=rec['status'],
         venue=rec['venue_size'], snapped=rec['snapped'], reason=rec['reason'],
-        osm=rec['osm_id'], osm_name=rec['osm_name'], m=rec['match_m'],
+        osm=rec['osm_id'], m=rec['match_m'],
     )
     if rec.get('enrich_dup'):
         props['dup'] = True
@@ -32,29 +47,33 @@ def _feature(rec):
                                                          round(rec['alat'], 6)]))
 
 
-def _osm_tag(rec):
-    if rec['source'] == 'bodysafe':
-        parts = [config.SRV_TO_OSM.get(t) for t in (rec['type'] or '').split(' + ')]
-        seen = [p for p in dict.fromkeys(parts) if p]
-        return ' / '.join(seen) or None
-    return config.TYPE_TO_OSM.get(rec['type'])
-
-
-def _orphan_feature(o):
+def _orphan_feature(o, tag_index):
     return dict(type='Feature', properties=dict(
-        src='osm', verdict='orphan', name=o['name'], osm=o['id'], tag=o['kind'],
+        src='osm', verdict='orphan', name=o['name'], osm=o['id'], kind=o['kind'],
+        diff=[[tag_index(k), v, None, tags.OSM_ONLY] for k, v in sorted(o['tags'].items())
+              if k in config.OSM_TAGS_KEPT],
         addr=' '.join(x for x in (o['housenumber'], o['street']) if x),
-        postcode=o['postcode'],
-        reason='mapped in OSM at a Toronto address, but no licence matches it',
+        reason='orphan',
     ), geometry=dict(type='Point', coordinates=[round(o['lon'], 6), round(o['lat'], 6)]))
 
 
 def build(records, orphans):
     os.makedirs(EXPLORER_DIR, exist_ok=True)
-    feats = [_feature(r) for r in records] + [_orphan_feature(o) for o in orphans]
+    legend = []
+    seen = {}
+
+    def tag_index(tag):
+        if tag not in seen:
+            seen[tag] = len(legend)
+            legend.append(tag)
+        return seen[tag]
+
+    feats = ([_feature(r, tag_index) for r in records]
+             + [_orphan_feature(o, tag_index) for o in orphans])
     counts = collections.Counter(f['properties']['verdict'] for f in feats)
     with open(os.path.join(EXPLORER_DIR, 'candidates.geojson'), 'w', encoding='utf-8') as fh:
-        json.dump(dict(type='FeatureCollection', features=feats), fh)
+        json.dump(dict(type='FeatureCollection', tagLegend=legend,
+                       reasons=REASONS, features=feats), fh)
 
     creatable = sum(1 for f in feats if f['properties']['verdict'] == 'new'
                     and f['properties'].get('venue', 1) < config.VENUE_THRESHOLD
@@ -74,7 +93,8 @@ def build(records, orphans):
     for name in ('explorer.css', 'explorer.js'):
         shutil.copy(os.path.join(config.ASSETS_DIR, name), os.path.join(EXPLORER_DIR, name))
 
-    print('%s features -> %s' % ('{:,}'.format(len(feats)), EXPLORER_DIR))
+    mb = os.path.getsize(os.path.join(EXPLORER_DIR, 'candidates.geojson')) / 1e6
+    print('%s features, %.1f MB -> %s' % ('{:,}'.format(len(feats)), mb, EXPLORER_DIR))
     for v in config.VERDICTS:
         print('  %-9s %6s' % (v, '{:,}'.format(counts[v])))
     print('  %-9s %6s  (new, category known, outside a >=%d-premise venue)'
