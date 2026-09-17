@@ -27,13 +27,25 @@ _FLOOR_PREFIXES = ('flr', 'fl', 'lvl')
 
 
 def phone(raw):
-    """Toronto ten-digit strings to the OSM/E.164-ish form mappers use here."""
+    """Toronto ten-digit strings to the OSM/E.164-ish form mappers use here.
+
+    The field carries placeholders -- 000-000-0000 on 56 premises, 416-000-0000 on
+    40 more -- which are well-formed and meaningless. Tagging those into OSM would be
+    worse than leaving phone off, so anything whose subscriber part is a single
+    repeated digit, or whose area code is not a real one, is dropped.
+    """
     digits = _PHONE.sub('', raw or '')
     if len(digits) == 11 and digits.startswith('1'):
         digits = digits[1:]
     if len(digits) != 10:
         return None
-    return '+1 %s-%s-%s' % (digits[:3], digits[3:6], digits[6:])
+    area, exchange, line = digits[:3], digits[3:6], digits[6:]
+    # NANP: area and exchange codes start 2-9; a repeated-digit remainder is filler.
+    if area[0] in '01' or exchange[0] in '01':
+        return None
+    if len(set(exchange + line)) == 1:
+        return None
+    return '+1 %s-%s-%s' % (area, exchange, line)
 
 
 def _category(rec):

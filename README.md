@@ -124,10 +124,16 @@ split falls this way.
 
 ## Status
 
-Measured, and explorable. `notes/osm-viability.md` answers whether these two feeds can
-enrich OSM, from live pulls rather than from the leads below — including the licence
-question, which turns out not to be a blocker. Read it before deciding the open questions;
-several of them it answers outright. `notes/scripts/` is the frozen record of that survey;
-`src/` is the working version of the same logic.
+Measured, explorable, and published. `notes/osm-viability.md` answers whether these two
+feeds can enrich OSM, from live pulls rather than from the leads below — including the
+licence question, which turns out not to be a blocker. Read it before deciding the open
+questions; several of them it answers outright. `notes/scripts/` is the frozen record of
+that survey; `src/` is the working version of the same logic.
+
+**[`notes/handoff.md`](notes/handoff.md) is where to start.** It lists what is known to
+be wrong, what is suspected and unmeasured, and what is worth building next — including
+the one thing that stops anyone else building this at all (the gazetteer path) and the
+fact that the capture-and-accumulate machinery this project is named for does not exist
+yet.
 
 Next step when the project earns it: `/gh-init` from inside this folder for a GitHub remote.
