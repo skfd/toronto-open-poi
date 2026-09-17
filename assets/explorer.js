@@ -79,9 +79,12 @@ function tagTable(p) {
   const adds = diff.filter(r => r[3] === ADD).length;
   const clashes = diff.filter(r => r[3] === DIFF).length;
 
+  const soleHead = p.verdict === 'not-poi'
+    ? 'what the licence holds (not proposed for OSM)'
+    : 'what this POI would be tagged';
   const head = p.osm
     ? '<tr><th class="k">tag</th><th>in OSM</th><th>from the licence</th></tr>'
-    : '<tr><th class="k">tag</th><th colspan="2">what this POI would be tagged</th></tr>';
+    : `<tr><th class="k">tag</th><th colspan="2">${soleHead}</th></tr>`;
 
   const body = diff.map(([tagIdx, osmVal, srcVal, state]) => {
     const tag = tagLegend[tagIdx] || '?';
