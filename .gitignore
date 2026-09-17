@@ -2,3 +2,4 @@ data/
 site/
 notes/scripts/data/
 __pycache__/
+.gh-pages-index

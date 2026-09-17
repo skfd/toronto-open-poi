@@ -3,6 +3,7 @@
     python run.py fetch [--force]   download the feeds, the archive and the OSM extracts
     python run.py build             classify and render site/explorer/
     python run.py serve [--port N]  serve site/ and open the explorer
+    python run.py publish           force-push site/ to the gh-pages branch
     python run.py all               fetch, build, serve
 """
 import argparse
@@ -53,6 +54,11 @@ def cmd_serve(args):
             print()
 
 
+def cmd_publish(args):
+    from src import publish
+    publish.publish()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -69,6 +75,9 @@ def main():
     p.add_argument('--port', type=int, default=8777)
     p.add_argument('--no-open', action='store_true')
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser('publish', help='force-push site/ to gh-pages')
+    p.set_defaults(func=cmd_publish)
 
     p = sub.add_parser('all', help='fetch, build, then serve')
     p.add_argument('--force', action='store_true')

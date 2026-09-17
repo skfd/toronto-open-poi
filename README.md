@@ -53,10 +53,13 @@ Decisions deliberately not made yet. Decide them on purpose.
 
 ## The explorer
 
+**<https://skfd.github.io/toronto-open-poi/>**
+
 ```
 python run.py fetch     # both feeds, DineSafe's frozen archive, two Overpass extracts
 python run.py build     # reduce, classify against OSM, render site/explorer/
 python run.py serve     # http://127.0.0.1:8777/explorer/
+python run.py publish   # force-push site/ to the gh-pages branch
 ```
 
 ![A candidate's popup: a tag-by-tag comparison of what OSM has against what the licence
@@ -95,7 +98,29 @@ so they sit on the health unit's own geocode, which the survey found to be off b
 metres about a third of the time. Pale dots are premises whose category DineSafe dropped in
 2023 and the archive cannot recover.
 
-**It is a survey queue, not an import.** Nothing here has been checked against the ground.
+**It is a survey queue, not an import.** Nothing here has been checked against the
+ground. Anyone editing OpenStreetMap from it should read the
+[Import Guidelines](https://wiki.openstreetmap.org/wiki/Import/Guidelines) and the
+[Automated Edits code of conduct](https://wiki.openstreetmap.org/wiki/Automated_Edits_code_of_conduct)
+first. No import has been proposed, and this is not one.
+
+## Licensing
+
+**The code and the published data are not under the same terms**, and the reason is
+worth knowing: `candidates.geojson` carries OSM element ids, tag values and
+coordinates for ~10,300 features, and 1,069 features that are nothing but OSM data.
+Under ODbL that makes it a *derivative database*, not a produced work, so the
+share-alike condition applies to the file itself.
+
+- **Code** (`src/`, `assets/`, `run.py`) &mdash; MIT, see [`LICENSE`](LICENSE).
+- **`candidates.geojson`** &mdash; [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+- **Sources** &mdash; DineSafe, BodySafe and the address points are
+  [Open Government Licence &ndash; Toronto](https://open.toronto.ca/open-data-license/);
+  the existing POIs are &copy; OpenStreetMap contributors. Both are OSM-compatible, so
+  data from these feeds may be used in OSM.
+
+[`LICENSE-DATA.md`](LICENSE-DATA.md) sets out which fields come from where and why the
+split falls this way.
 
 ## Status
 

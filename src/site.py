@@ -94,6 +94,13 @@ def build(records, orphans):
         shutil.copy(os.path.join(config.ASSETS_DIR, name), os.path.join(EXPLORER_DIR, name))
 
     mb = os.path.getsize(os.path.join(EXPLORER_DIR, 'candidates.geojson')) / 1e6
+    # GitHub Pages serves the repository root; the page lives one level down.
+    with open(os.path.join(config.SITE_DIR, 'index.html'), 'w', encoding='utf-8') as fh:
+        fh.write('<!doctype html><meta charset="utf-8">'
+                 '<meta http-equiv="refresh" content="0; url=explorer/">'
+                 '<title>Toronto Open POI</title>'
+                 '<a href="explorer/">Toronto Open POI &mdash; candidate explorer</a>\n')
+
     print('%s features, %.1f MB -> %s' % ('{:,}'.format(len(feats)), mb, EXPLORER_DIR))
     for v in config.VERDICTS:
         print('  %-9s %6s' % (v, '{:,}'.format(counts[v])))
