@@ -99,6 +99,7 @@ def build(records, orphans):
         fh.write('<!doctype html><meta charset="utf-8">'
                  '<meta http-equiv="refresh" content="0; url=explorer/">'
                  '<title>Toronto Open POI</title>'
+                 '<script data-goatcounter="https://osm-toronto.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'
                  '<a href="explorer/">Toronto Open POI &mdash; candidate explorer</a>\n')
 
     print('%s features, %.1f MB -> %s' % ('{:,}'.format(len(feats)), mb, EXPLORER_DIR))
